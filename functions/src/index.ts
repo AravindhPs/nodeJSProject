@@ -1,11 +1,19 @@
+/**
+ * Import function triggers from their respective submodules:
+ *
+ * import {onCall} from "firebase-functions/v2/https";
+ * import {onDocumentWritten} from "firebase-functions/v2/firestore";
+ *
+ * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ */
+
 
 require("dotenv").config();
+import * as functions from "firebase-functions";
 const express = require("express");
 const {google} = require("googleapis");
 const {JWT} = require("google-auth-library");
 const cors = require("cors");
-const port = process.env.PORT | 3000;
-
 const app = express();
 
 // Middleware
@@ -16,7 +24,7 @@ const allowedOrigins = [
 ];
 
 const corsOptions = {
-  origin: function(origin, callback) {
+  origin: function(origin:any, callback:any) {
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -74,12 +82,12 @@ async function getSheetsClient() {
   return google.sheets({version: "v4", auth});
 }
 
-async function getSheetGid(sheetsClient, targetSheetName) {
+async function getSheetGid(sheetsClient: any, targetSheetName: any) {
   try {
     const spreadsheetMeta = await sheetsClient.spreadsheets.get({
       spreadsheetId: SPREADSHEET_ID,
     });
-    const sheet = spreadsheetMeta.data.sheets.find((s ) => s.properties.title === targetSheetName);
+    const sheet = spreadsheetMeta.data.sheets.find((s : any) => s.properties.title === targetSheetName);
     if (!sheet) {
       throw new Error(`Sheet with name "${targetSheetName}" not found.`);
     }
@@ -91,7 +99,7 @@ async function getSheetGid(sheetsClient, targetSheetName) {
 }
 
 // Helper to safely parse JSON
-function tryParseJSONObject(jsonString) {
+function tryParseJSONObject(jsonString: any) {
   try {
     const o = JSON.parse(jsonString);
     if (o && typeof o === "object") {
@@ -102,7 +110,7 @@ function tryParseJSONObject(jsonString) {
 }
 
 // GET all customers
-app.get("/api/customers", async (req, res) => {
+app.get("/api/customers", async (req: any, res: any) => {
   try {
     const sheets = await getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
@@ -113,9 +121,9 @@ app.get("/api/customers", async (req, res) => {
     const rows = response.data.values;
     if (rows && rows.length > 0) {
       const headers = rows[0];
-      const customers = rows.slice(1).map((row ) => {
-        const customer  = {};
-        headers.forEach((header, index) => {
+      const customers = rows.slice(1).map((row : any) => {
+        const customer : any = {};
+        headers.forEach((header: any, index: any) => {
           const value = row[index] !== undefined ? row[index] : null;
           if (header === CUSTOM_DATA_COLUMN_NAME && typeof value === "string") {
             customer[header] = tryParseJSONObject(value) || value; // Parse or keep as string if not valid JSON object
@@ -129,14 +137,14 @@ app.get("/api/customers", async (req, res) => {
     } else {
       res.json([]);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching customers:", error.message, error.response?.data);
     res.status(500).json({error: "Failed to fetch customers", details: error.message});
   }
 });
 
 // GET a single customer by ID
-app.get("/api/customers/:id", async (req, res) => {
+app.get("/api/customers/:id", async (req: any, res: any) => {
   const customerId = req.params.id;
   try {
     const sheets = await getSheetsClient();
@@ -148,17 +156,17 @@ app.get("/api/customers/:id", async (req, res) => {
     const rows = response.data.values;
     if (rows && rows.length > 1) {
       const headers = rows[0];
-      const idColumnIndex = headers.findIndex((header ) => header.toLowerCase() === "phone");
+      const idColumnIndex = headers.findIndex((header : any) => header.toLowerCase() === "phone");
 
       if (idColumnIndex === -1) {
         return res.status(500).json({error: "Sheet does not have an 'id' column in the header."});
       }
 
-      const customerRow = rows.slice(1).find((row ) => row[idColumnIndex] === customerId);
+      const customerRow = rows.slice(1).find((row : any) => row[idColumnIndex] === customerId);
 
       if (customerRow) {
-        const customer = {};
-        headers.forEach((header, index) => {
+        const customer : any= {};
+        headers.forEach((header: any, index: any) => {
           const value = customerRow[index] !== undefined ? customerRow[index] : null;
           if (header === CUSTOM_DATA_COLUMN_NAME && typeof value === "string") {
             customer[header] = tryParseJSONObject(value) || value;
@@ -173,14 +181,14 @@ app.get("/api/customers/:id", async (req, res) => {
     } else {
       res.status(404).json({error: "No data in sheet or customer not found"});
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error fetching customer ${customerId}:`, error.message);
     res.status(500).json({error: "Failed to fetch customer", details: error.message});
   }
 });
 
 // POST (Create) a new customer
-app.post("/api/customers", async (req, res) => {
+app.post("/api/customers", async (req: any, res: any) => {
   try {
     const sheets = await getSheetsClient();
     const newCustomerData = req.body;
@@ -195,7 +203,7 @@ app.post("/api/customers", async (req, res) => {
       return res.status(500).json({error: "Could not retrieve headers from sheet."});
     }
 
-    const valuesToAppend = [headers.map((header ) => {
+    const valuesToAppend = [headers.map((header : any) => {
       const value = newCustomerData[header];
       if (header === CUSTOM_DATA_COLUMN_NAME && typeof value === "object" && value !== null) {
         return JSON.stringify(value);
@@ -212,14 +220,14 @@ app.post("/api/customers", async (req, res) => {
       resource,
     });
     res.status(201).json({message: "Customer created successfully", data: newCustomerData, updates: result.data.updates});
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating customer:", error.message, error.response?.data?.error);
     res.status(500).json({error: "Failed to create customer", details: error.message});
   }
 });
 
 // PUT (Update) a customer by ID
-app.put("/api/customers/:id", async (req, res) => {
+app.put("/api/customers/:id", async (req: any, res: any) => {
   const customerId = req.params.id;
   const updatedCustomerData = req.body;
   try {
@@ -236,7 +244,7 @@ app.put("/api/customers/:id", async (req, res) => {
     }
 
     const headers = rows[0];
-    const idColumnIndex = headers.findIndex((header ) => header.toLowerCase() === "id");
+    const idColumnIndex = headers.findIndex((header : any) => header.toLowerCase() === "id");
     if (idColumnIndex === -1) {
       return res.status(500).json({error: "Sheet does not have an 'id' column."});
     }
@@ -255,7 +263,7 @@ app.put("/api/customers/:id", async (req, res) => {
 
     const actualSheetRowNumber = rowIndex + 1;
 
-    const newRowValues = headers.map((header, colIndex) => {
+    const newRowValues = headers.map((header: any, colIndex: any) => {
       let value;
       if (updatedCustomerData.hasOwnProperty(header)) {
         value = updatedCustomerData[header];
@@ -277,15 +285,16 @@ app.put("/api/customers/:id", async (req, res) => {
       valueInputOption: "USER_ENTERED",
       resource,
     });
+
     res.json({message: `Customer ${customerId} updated successfully`, data: updatedCustomerData});
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error updating customer ${customerId}:`, error.message, error.response?.data?.error);
     res.status(500).json({error: "Failed to update customer", details: error.message});
   }
 });
 
 // DELETE a customer by ID (No changes needed here for customData unless deletion logic depends on it)
-app.delete("/api/customers/:id", async (req, res) => {
+app.delete("/api/customers/:id", async (req: any, res: any) => {
   const customerId = req.params.id;
   try {
     const sheets = await getSheetsClient();
@@ -300,7 +309,7 @@ app.delete("/api/customers/:id", async (req, res) => {
       return res.status(404).json({error: "Customer not found or sheet too empty."});
     }
     const headers = allRows[0];
-    const idColumnIndex = headers.findIndex((h ) => h.toLowerCase() === "id");
+    const idColumnIndex = headers.findIndex((h : any) => h.toLowerCase() === "id");
     if (idColumnIndex === -1) {
       return res.status(500).json({error: "Sheet must have an 'id' header column."});
     }
@@ -338,16 +347,12 @@ app.delete("/api/customers/:id", async (req, res) => {
     });
 
     res.json({message: `Customer ${customerId} deleted successfully`});
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error deleting customer ${customerId}:`, error.message, error.response?.data?.error);
     res.status(500).json({error: "Failed to delete customer", details: error.message});
   }
 });
 
+export const api = functions.https.onRequest(app);
 
-app.listen(port, () => {
-    console.log(`Backend proxy server running at http://localhost:${port}`);
-    console.log(`Using Spreadsheet ID: ${SPREADSHEET_ID}`);
-    console.log(`Using Sheet Name: ${process.env.SHEET_NAME}`);
-    console.log(`Custom data will be handled in column: '${CUSTOM_DATA_COLUMN_NAME}'`);
-});
+
