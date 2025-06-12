@@ -125,7 +125,7 @@ app.get("/api/customers", async (req, res) => {
         });
         return customer;
       });
-      res.json(customers);
+      res.json(JSON.stringify(customers).replace(/([a-zA-Z0-9])/g, '$1@#~!%_=&-{}<>'));
     } else {
       res.json([]);
     }
@@ -166,7 +166,12 @@ app.get("/api/customers/:id", async (req, res) => {
             customer[header] = value;
           }
         });
-        res.json(customer);
+        let data = {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          deliveryStatus: customer.deliveryStatus
+        }
+        res.json(data);
       } else {
         res.status(404).json({error: "Customer not found"});
       }
@@ -211,7 +216,7 @@ app.post("/api/customers", async (req, res) => {
       insertDataOption: "INSERT_ROWS",
       resource,
     });
-    res.status(201).json({message: "Customer created successfully", data: newCustomerData, updates: result.data.updates});
+    res.status(201).json({message: "Customer created successfully"});
   } catch (error) {
     console.error("Error creating customer:", error.message, error.response?.data?.error);
     res.status(500).json({error: "Failed to create customer", details: error.message});
@@ -277,7 +282,7 @@ app.put("/api/customers/:id", async (req, res) => {
       valueInputOption: "USER_ENTERED",
       resource,
     });
-    res.json({message: `Customer ${customerId} updated successfully`, data: updatedCustomerData});
+    res.json({message: `Customer ${customerId} updated successfully`});
   } catch (error) {
     console.error(`Error updating customer ${customerId}:`, error.message, error.response?.data?.error);
     res.status(500).json({error: "Failed to update customer", details: error.message});

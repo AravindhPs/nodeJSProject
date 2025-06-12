@@ -19,6 +19,7 @@ const app = express();
 // Middleware
 // server.js
 const allowedOrigins = [
+  "capacitor://localhost",
   "http://localhost:4200",
   "https://pleatswithdivu.web.app",
 ];
@@ -133,7 +134,7 @@ app.get("/api/customers", async (req: any, res: any) => {
         });
         return customer;
       });
-      res.json(customers);
+      res.json(JSON.stringify(customers).replace(/([a-zA-Z0-9])/g, '$1@#~!%_=&-{}<>'));
     } else {
       res.json([]);
     }
@@ -174,7 +175,12 @@ app.get("/api/customers/:id", async (req: any, res: any) => {
             customer[header] = value;
           }
         });
-        res.json(customer);
+        let data = {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          deliveryStatus: customer.deliveryStatus
+        }
+        res.json(data);
       } else {
         res.status(404).json({error: "Customer not found"});
       }
@@ -212,14 +218,14 @@ app.post("/api/customers", async (req: any, res: any) => {
     })];
 
     const resource = {values: valuesToAppend};
-    const result = await sheets.spreadsheets.values.append({
+    await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: `${process.env.SHEET_NAME}!A:A`,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
       resource,
     });
-    res.status(201).json({message: "Customer created successfully", data: newCustomerData, updates: result.data.updates});
+    res.status(201).json({message: "Customer created successfully"});
   } catch (error: any) {
     console.error("Error creating customer:", error.message, error.response?.data?.error);
     res.status(500).json({error: "Failed to create customer", details: error.message});
@@ -286,7 +292,7 @@ app.put("/api/customers/:id", async (req: any, res: any) => {
       resource,
     });
 
-    res.json({message: `Customer ${customerId} updated successfully`, data: updatedCustomerData});
+    res.json({message: `Customer ${customerId} updated successfully`});
   } catch (error: any) {
     console.error(`Error updating customer ${customerId}:`, error.message, error.response?.data?.error);
     res.status(500).json({error: "Failed to update customer", details: error.message});
